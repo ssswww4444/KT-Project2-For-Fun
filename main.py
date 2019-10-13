@@ -1,6 +1,6 @@
 import os
 from utils import read_train_txt, read_test_txt, write_prediction, get_user_dict, get_user_dict_test
-from preprocess import process_one_tweet
+from preprocess import process_one_tweet, remove_test_users
 import numpy as np
 import pickle
 import random
@@ -27,6 +27,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import SGDClassifier, LogisticRegression
 
 DATA_DIR = "data/"
+DEV_TXT = "dev_tweets.txt"
 TRAIN_TXT = "train_tweets.txt"
 TEST_TXT = "test_tweets.txt"
 OUT_CSV = "test_prediction.csv"
@@ -38,28 +39,32 @@ def main():
     # read all data
     X, y, users_train = read_train_txt(os.path.join(DATA_DIR, TRAIN_TXT))
 
-    # X_train, X_dev, y_train, y_dev = train_test_split(X, y, test_size=0.1, random_state=123)
+    X_dev, y_dev, users_dev = read_train_txt(os.path.join(DATA_DIR, DEV_TXT))
+
+    # print(X_dev)
+    # print(y)
+    # print(users_dev)
 
     X_test, ids, users_test = read_test_txt(os.path.join(DATA_DIR, TEST_TXT))
 
     X_train, y_train = X, y
 
-    # for i in range(len(X_train)):
-    #     X_train[i] = " ".join(process_one_tweet(X_train[i]))
-
-    # for i in range(len(X_dev)):
-    #     X_dev[i] = " ".join(process_one_tweet(X_dev[i]))
-
-    # for i in range(len(X_test)):
-    #     X_test[i] = " ".join(process_one_tweet(X_test[i]))
-
     # merge data according to user id
     X_train2, y_train2 = get_user_dict(X_train, y_train, users_train)
 
-    new_X_train = X_train + X_train2
-    new_y_train = y_train + y_train2
+    # merge dev data according to user id
+    X_dev, y_dev = get_user_dict(X_dev, y_dev, users_dev)
+
+    new_X_train = X_train + X_train2 + X_dev
+    new_y_train = y_train + y_train2 + y_dev
 
     users_test, X_test, user_ids_dict = get_user_dict_test(X_test, ids, users_test)
+
+    # all_users = X_train + X_dev + X_test
+
+    # # remove irrelevant users
+    # for i in range(len(X_test)):
+    #     X_test[i] = remove_test_users(X_test[i], X_train + X_dev)
 
     # # -------------- Stage 2: Tf-idf --------------
 
@@ -69,18 +74,21 @@ def main():
                                  sublinear_tf = True,
                                  ngram_range=(1,1))
 
-    X_train = vectorizer.fit_transform(new_X_train)
-    X_test =  vectorizer.transform(X_test)
+    
+    X_test =  vectorizer.fit_transform(X_test)
+    X_train = vectorizer.transform(new_X_train)
+    X_dev = vectorizer.transform(X_dev)
 
     # X_dev =  vectorizer.transform(X_dev)
 
     print(X_train.shape)
+    print(X_dev.shape)
 
     # # -------------- Stage 3: Training --------------
 
     print("--- Start training ---")
 
-    svm = OneVsRestClassifier(LinearSVC(), n_jobs=-1)
+    svm = OneVsRestClassifier(LinearSVC(C = 1.5), n_jobs=-1)
 
     svm.fit(X_train, new_y_train)
 

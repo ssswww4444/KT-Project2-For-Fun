@@ -60,3 +60,17 @@ def process_one_tweet(tweet):
                 new_tweet_ls.append(lemmatizer.lemmatize(word))
 
     return new_tweet_ls
+
+def remove_test_users(tweet, all_users):
+    
+    # lower case
+    all_users = [user.lower() for user in all_users]
+    new_tweet_ls = []
+
+    for word in tokenizer.tokenize(tweet):
+        if word[0] != "@":
+            new_tweet_ls.append(word)
+        elif word[1:] in all_users: # only keep relevant users
+            new_tweet_ls.append(word)
+    
+    return " ".join(new_tweet_ls)

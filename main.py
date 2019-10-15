@@ -70,8 +70,7 @@ def main():
 
     # compute tf-idf features
     tokenizer = TweetTokenizer(preserve_case=False)
-    vectorizer = TfidfVectorizer(tokenizer=tokenizer.tokenize,
-                                 sublinear_tf = True,
+    vectorizer = TfidfVectorizer(sublinear_tf = True,
                                  ngram_range=(1,1))
 
     

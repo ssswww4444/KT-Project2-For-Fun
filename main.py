@@ -2,29 +2,17 @@ import os
 from utils import read_train_txt, read_test_txt, write_prediction, get_user_dict, get_user_dict_test
 from preprocess import process_one_tweet, remove_test_users
 import numpy as np
-import pickle
-import random
-import math
 
 # for text processing
-import re
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.decomposition import TruncatedSVD
-from nltk.tokenize.casual import TweetTokenizer
-from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # for machine learning
 from sklearn.svm import LinearSVC
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB, MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import MultinomialNB
 # from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler
-from sklearn.pipeline import make_pipeline
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.preprocessing import LabelEncoder
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.linear_model import SGDClassifier, LogisticRegression
 
 DATA_DIR = "data/"
 DEV_TXT = "dev_tweets.txt"
@@ -41,35 +29,24 @@ def main():
 
     X_dev, y_dev, users_dev = read_train_txt(os.path.join(DATA_DIR, DEV_TXT))
 
-    # print(X_dev)
-    # print(y)
-    # print(users_dev)
-
     X_test, ids, users_test = read_test_txt(os.path.join(DATA_DIR, TEST_TXT))
 
     X_train, y_train = X, y
 
     # merge data according to user id
-    X_train2, y_train2 = get_user_dict(X_train, y_train, users_train)
+    X_train_merged, y_train_merged = get_user_dict(X_train, y_train, users_train)
 
     # merge dev data according to user id
     X_dev, y_dev = get_user_dict(X_dev, y_dev, users_dev)
 
-    new_X_train = X_train + X_train2 + X_dev
-    new_y_train = y_train + y_train2 + y_dev
+    new_X_train = X_train + X_train_merged + X_dev
+    new_y_train = y_train + y_train_merged + y_dev
 
     users_test, X_test, user_ids_dict = get_user_dict_test(X_test, ids, users_test)
-
-    # all_users = X_train + X_dev + X_test
-
-    # # remove irrelevant users
-    # for i in range(len(X_test)):
-    #     X_test[i] = remove_test_users(X_test[i], X_train + X_dev)
 
     # # -------------- Stage 2: Tf-idf --------------
 
     # compute tf-idf features
-    tokenizer = TweetTokenizer(preserve_case=False)
     vectorizer = TfidfVectorizer(sublinear_tf = True,
                                  ngram_range=(1,1))
 
@@ -77,11 +54,6 @@ def main():
     X_test =  vectorizer.fit_transform(X_test)
     X_train = vectorizer.transform(new_X_train)
     X_dev = vectorizer.transform(X_dev)
-
-    # X_dev =  vectorizer.transform(X_dev)
-
-    print(X_train.shape)
-    print(X_dev.shape)
 
     # # -------------- Stage 3: Training --------------
 
